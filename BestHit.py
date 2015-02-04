@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+'''Class and functions for performing a Bidirectional/reciprocal best hit search between two
+sets of protein sequences. The sets must be indexed by makeblastdb before the functions can run.'''
+
 #
 # Reciprocal Best Hit
 # Kristian Jensen, Februar 2015
@@ -12,7 +15,7 @@ from StringIO import StringIO
 import re
 
 def blast_query(query,db,cmd="blastp"):
-    "Returns the STDOUT of a blastp search of query against db."
+    "Returns the STDOUT (XML format) of a blastp search of <query> against <db>."
     cline = NcbiblastpCommandline(db=db,cmd=cmd,outfmt=5,remote=False)
     # Argument: outfmt = 5 --- Output format is XML
     stdout, stderr = cline(stdin=query)
@@ -28,13 +31,18 @@ def parse_hit_description(description):
     return gene_name
 
 class BestHit(object):
-    '''Reciprocal best hit'''
+    '''Reciprocal best hit object. Initialize with the reference fasta file, the reference
+    blast db and the query blast db (made from the query organism set of proteins).
+    To run the RBH call the run method.'''
     def __init__(self,ref_fasta,ref_db,query_db):
         self.ref_fasta = SeqIO.parse(open(ref_fasta,"rU"),"fasta")
         self.ref_db = ref_db
         self.query_db = query_db
         
     def run(self,extractor_function=parse_hit_description):
+        '''Generator that returns the reciprocal best hits. Pass a function as extractor_function that extracts
+        the gene name from the sequence description. Default extracts [gene=<name>], as formatted by GenBank
+        CDS downloads.'''
         for record in self.ref_fasta:
             ref_gene = extractor_function(record.description)
             blast_result = NCBIXML.read(StringIO(blast_query(record.format("fasta"),self.query_db)))
