@@ -1,0 +1,5 @@
+setup.py
+krisj.egg-info/PKG-INFO
+krisj.egg-info/SOURCES.txt
+krisj.egg-info/dependency_links.txt
+krisj.egg-info/top_level.txt
