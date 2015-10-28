@@ -17,6 +17,8 @@
 # Kristian Jensen, March 2015
 #
 
+from __future__ import print_function
+
 import math
 import cameo
 import colorsys
@@ -32,8 +34,36 @@ import bokeh
 import sys
 from scipy import stats
 from cameo.exceptions import SolveError
-import bokeh.plotting as bplt
-import random
+
+
+class FeatureMap(object):
+    def __init__(self, seq_record, feature_id=None):
+        self.genome = seq_record
+        self._cds_features = [feature for feature in seq_record.features if feature.type == "CDS"]
+        self._feature_dict = self._index_features(self._cds_features, feature_id)
+
+    def _index_features(self, features, feature_id):
+        if feature_id is None:
+            feature_id = lambda feat: feat.qualifiers["locus_tag"][0]
+        feature_dict = {feature_id(feature): feature for feature in features}
+        return feature_dict
+
+    def features(self, pos=None, end=None):
+        if pos is None:
+            return self._cds_features
+        elif end is None:
+            return list(f for f in self._cds_features if f.location.start <= pos < f.location.end)
+        else:
+            return [f for f in self._cds_features if f.location.start < end and pos < f.location.end]
+
+    def mutate(self, mutation): # TODO several mutations at a time
+        pos = mutation.position
+        mutated_component = self._component.mutate([mutation])
+        mutated_features = [f for f in mutated_component.features if f.location.start <= pos <= f.location.end and f.type == "CDS"]
+        return mutated_features
+
+    def get_by_id(self, value):
+        return self._feature_dict[value]
 
 
 def round_fva_bound(bound, ndecimals):
@@ -233,8 +263,6 @@ def plot_predicted_growth_rates(predicted_solutions, experimental_growth_rate_fi
 
     #x_range = None
     #y_range = None
-
-    print plot_df["mean"].values.mean(), plot_df["mean"].values.std(), plot_df["calc"].values.mean(), plot_df["calc"].values.std()
 
     slope, intercept, pearson, p_val, stderr = stats.linregress(plot_df["mean"].values, plot_df["calc"].values)
 

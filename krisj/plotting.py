@@ -93,7 +93,7 @@ def bar_plot_with_error_bars(data, categories=None, colors=None, legend=True, **
         if len(categories) != n_cats:
             raise ValueError("Length of 'categories' argument does not fit the data")
 
-    fig = bplt.figure(x_range=categories, legend=legend, **kwargs)
+    fig = bplt.figure(x_range=categories, **kwargs)
     xs = np.arange(1, n_cats+1)
 
     series_centers = np.linspace(-width, width, n_series+2)[1:-1]
