@@ -125,6 +125,12 @@ def make_categorical_scatter(data, color="#669900", percentiles=(), **kwargs):
     :param data:
     :return:
     """
+    circle_kwargs = {}
+    for k, v in kwargs.items():
+        if k.startswith("circle_"):
+            circle_kwargs[k[7:]] = v
+            del kwargs[k]
+
     categories = list(data.keys())
 
     fig = bplt.figure(title=None, x_range=categories, **kwargs)
@@ -138,7 +144,7 @@ def make_categorical_scatter(data, color="#669900", percentiles=(), **kwargs):
             fig.line([i+0.8, i+1.2],[median, median], color="black")
         dat_list = list(data[name])
         x_list = [i+1+random.gauss(0, 0.1) for _ in dat_list]
-        fig.circle(x_list, dat_list, fill_alpha=0.4, line_alpha=0,  fill_color=color)
+        fig.circle(x_list, dat_list, fill_alpha=0.4, line_alpha=0,  fill_color=color, **circle_kwargs)
 
         for perc in percentiles:
             percentile = np.percentile(dat_array, perc)
