@@ -122,10 +122,10 @@ def bar_plot_with_error_bars(data, categories=None, colors=None, legend=True, **
 
 def make_categorical_scatter(data, color="#669900", percentiles=(), **kwargs):
     """
-    :param data:
+    :param data: Dict-like
     :return:
     """
-    circle_kwargs = {}
+    circle_kwargs = {'fill_alpha': 0.4, 'line_alpha': 0,  'fill_color': color}
     for k, v in kwargs.items():
         if k.startswith("circle_"):
             circle_kwargs[k[7:]] = v
@@ -144,7 +144,7 @@ def make_categorical_scatter(data, color="#669900", percentiles=(), **kwargs):
             fig.line([i+0.8, i+1.2],[median, median], color="black")
         dat_list = list(data[name])
         x_list = [i+1+random.gauss(0, 0.1) for _ in dat_list]
-        fig.circle(x_list, dat_list, fill_alpha=0.4, line_alpha=0,  fill_color=color, **circle_kwargs)
+        fig.circle(x_list, dat_list, **circle_kwargs)
 
         for perc in percentiles:
             percentile = np.percentile(dat_array, perc)
