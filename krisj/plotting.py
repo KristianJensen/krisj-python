@@ -21,8 +21,22 @@ def generate_hex_string(r, g, b):
     return "#%2.2x%2.2x%2.2x" % (r*255, g*255, b*255)
 
 
-def dataframe_summary_plot(df, categorical_column, numerical_column, error_bars="std", **kwargs):
-    categories = list(set(df[categorical_column]))
+def number_to_color(a):
+    """Converts a number between 0 and 1 to a hex rgb string.
+    0 = blue
+    1 = red
+    """
+    if not 0 <= a <= 1:
+        raise ValueError("The input number must be in the range [0, 1]")
+    red = int(a*255)
+    green = 50
+    blue = int((1-a)*150)
+    return "#%2.2x%2.2x%2.2x" % (red, green, blue)
+
+
+def dataframe_summary_plot(df, categorical_column, numerical_column, error_bars="std", categories=None, **kwargs):
+    if categories is None:
+        categories = list(set(df[categorical_column]))
     n_cats = len(categories)
     xs = np.arange(1, n_cats+1)
 
@@ -120,13 +134,13 @@ def bar_plot_with_error_bars(data, categories=None, colors=None, legend=True, **
     return fig
 
 
-def make_categorical_scatter(data, color="#669900", percentiles=(), **kwargs):
+def make_categorical_scatter(data, color="#669900", percentiles=(), jitter=0.1, **kwargs):
     """
     :param data: Dict-like
     :return:
     """
     circle_kwargs = {'fill_alpha': 0.4, 'line_alpha': 0,  'fill_color': color}
-    for k, v in kwargs.items():
+    for k, v in list(kwargs.items()):
         if k.startswith("circle_"):
             circle_kwargs[k[7:]] = v
             del kwargs[k]
@@ -143,7 +157,7 @@ def make_categorical_scatter(data, color="#669900", percentiles=(), **kwargs):
             median = np.percentile(dat_array, 50)
             fig.line([i+0.8, i+1.2],[median, median], color="black")
         dat_list = list(data[name])
-        x_list = [i+1+random.gauss(0, 0.1) for _ in dat_list]
+        x_list = [i+1+random.gauss(0, jitter) for _ in dat_list]
         fig.circle(x_list, dat_list, **circle_kwargs)
 
         for perc in percentiles:
@@ -200,5 +214,38 @@ def radar_plot(df, title=None):
         fig.patch(x=xs, y=ys, color=color_strings[j], line_width=3, fill_alpha=0.1, legend=series[j])
 
     #fig.circle(x=0, y=0, radius=1, fill_alpha=0)
+
+    return fig
+
+
+def categorical_heatmap(df, square_size=0.95, color_function=number_to_color, normalise_data=True, **kwargs):
+    """
+    Make a categorical heat map based on the values of a DataFrame.
+    color_function must be a function that takes a number between 0 and 1 and returns an RGB hex string.
+    """
+    plot_df = df.copy()
+    if normalise_data:
+        plot_df = plot_df - plot_df.values.min()
+        plot_df = plot_df / plot_df.values.max()
+    x_cats = list(df)
+    y_cats = list(df.index)
+
+    xs = []
+    ys = []
+    colors = []
+
+    fig = bplt.figure(x_range=x_cats, y_range=y_cats, **kwargs)
+    for i, x in enumerate(x_cats):
+        for j, y in enumerate(y_cats):
+            color = color_function(plot_df.loc[y, x])
+
+            xs.append(i+1)
+            ys.append(j+1)
+            colors.append(color)
+
+    fig.rect(xs, ys, width=square_size, height=square_size, color=colors)
+
+    fig.xaxis.major_label_orientation = 1
+    fig.grid.grid_line_color = None
 
     return fig

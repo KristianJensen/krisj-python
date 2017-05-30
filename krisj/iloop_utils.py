@@ -30,6 +30,11 @@ except ImportError:
 
 
 class ILoopConnection(object):
+    """Object that is used to communicate with the iLoop platform.
+    All actions are performed by calling methods on an instance of this class
+    :param root_url:
+    :param auth_path:
+    :param password: """
     def __init__(self, root_url, auth_path, password, verify=True):
         self._root = root_url.rstrip("/")
         with open(auth_path) as infile:
@@ -54,7 +59,7 @@ class ILoopConnection(object):
     def _make_post_request(self, path, data=None):
         if data is None:
             data = {}
-        r =  requests.post(self._root+"/"+path.lstrip("/"), auth=self._auth, json=data, verify=self._verify)
+        r = requests.post(self._root+"/"+path.lstrip("/"), auth=self._auth, json=data, verify=self._verify)
         self._check_status(r)
         return r
 
@@ -79,17 +84,25 @@ class ILoopConnection(object):
             data.append({"compound": k, "concentration": v})
         self._make_post_request("/api/medium/"+str(medium_id)+"/contents", data)
 
-    def add_medium(self, name, identifier, ph, description=None, composition=None):
+    def add_medium(self, name, identifier, ph, description=None, composition=None, parent=None):
         if composition is not None:  # Check that all compounds are in the DB
             for chebi_name in composition:
                 result = self.list_compounds("chebi_name", chebi_name)
                 if len(result) == 0:
                     raise ValueError(chebi_name + " could not be found in the database.")
         data = {"name": name, "identifier": identifier, "ph": ph, "description": description}
+        if parent is not None:
+            parent_id = self._get_id(parent)
+            data["parent"] = parent_id
+            parent_composition = self.get_media_contents(parent)
+            for component, conc in parent_composition.items():
+                composition[component] = composition.get(component, 0) + conc  # Add parent composition
         r = self._add_object("medium", data)
-        medium_id = self._get_id(r.json())
+        medium = r.json()
+        medium_id = self._get_id(medium)
         if composition is not None:
             self._add_recipe_to_medium(medium_id, composition)
+        return medium
 
     def compound_to_chebi(self, compound_name):
         r = self._make_get_request("/api/chemical-entity/search", {"query": compound_name})
@@ -262,3 +275,15 @@ class ILoopConnection(object):
     def plate_types(self):
         r = self._make_get_request("/api/plate/types")
         return [p["type"] for p in r.json()]
+
+    @staticmethod
+    def get_media_contents(medium):
+        uri = medium["$uri"]
+        contents = self._make_get_request(uri).json()
+        content_dict = {}
+        for component in contents:
+            compound_name = self._make_get_request(component["compound"]["$ref"]).json()["name"]
+            conc = component["concentration"]
+            content_dict[compound_name] = conc
+        return content_dict
+
